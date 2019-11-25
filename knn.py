@@ -1,6 +1,10 @@
 import numpy as np
 from math import sqrt
 arr = []
+accu = []
+prec = []
+reca = []
+fscore = []
 reader = open("project3_dataset2.txt")
 iterationCounter = 0
 try:
@@ -70,6 +74,26 @@ def normalize(features):
         for i in range(len(row)):
             row[i] = (row[i]-minmax[i][0])/(minmax[i][1]-minmax[i][0])
 
+def get_values(actual,predictions):
+    a = 0
+    b = 0
+    c = 0
+    d = 0
+    for i in range(len(actual)):
+        if(actual[i]==1 and predictions[i]==1):
+            a += 1
+        elif(actual[i]==1 and predictions[i]==0):
+            b += 1
+        elif(actual[i]==0 and predictions[i]==1):
+            c += 1
+        else:
+            d += 1
+
+    accu.append(float(a + d)/(a + b + c + d))
+    fscore.append(float(2 * a) / ((2 * a) + b + c))
+    prec.append(float(a)/(a + c))
+    reca.append(float(a)/(a + b))
+
 ### normalizing the features 
 normalize(features)
 
@@ -91,11 +115,32 @@ for fold in range(len(cross_valid)):
         predictions.append(prediction)
 
     actual = [row[-1] for row in x]
-    correct = 0
-    for i in range(len(actual)):
-        if(actual[i]==predictions[i]):
-            correct += 1
-    scores.append(correct/float(len(actual))*100.0)
+    # correct = 0
+    # for i in range(len(actual)):
+    #     if(actual[i]==predictions[i]):
+    #         correct += 1
+    # scores.append(correct/float(len(actual))*100.0)
+    get_values(actual,predictions)
 
-print(scores)
+#print(scores)
+print("**** 10 Fold Accuracy ****")
+print(accu)
+print("Mean Accuracy: " + str(np.mean(accu)))
+print("")
+
+print("**** 10 Fold Precision ****")
+print(prec)
+print("Mean Precision: " + str(np.mean(prec)))
+print("")
+
+print("**** 10 Fold Recall ****")
+print(reca)
+print("Mean Recall: " + str(np.mean(reca)))
+print("")
+
+print("**** 10 Fold Fscore ****")
+print(fscore)
+print("Mean Fscore: " + str(np.mean(fscore)))
+
+
 
