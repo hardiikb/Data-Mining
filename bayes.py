@@ -8,7 +8,7 @@ accu = []
 prec = []
 reca = []
 fscore = []
-reader = open("project3_dataset2.txt")
+reader = open("project3_dataset1.txt")
 iterationCounter = 0
 try:
     for line in reader:
