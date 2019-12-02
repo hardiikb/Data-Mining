@@ -4,12 +4,14 @@ from math import pi
 from math import exp
 
 arr = []
+arr1 = []
 accu = []
 prec = []
 reca = []
 fscore = []
-reader = open("project3_dataset2.txt")
-iterationCounter = 0
+reader = open("project3_dataset3_train.txt")
+reader1 = open("project3_dataset3_test.txt")
+
 try:
     for line in reader:
         line = line.strip()
@@ -18,54 +20,58 @@ try:
 finally:
     reader.close()
 
+try:
+    for line in reader1:
+        line = line.strip()
+        line_arr = line.split("\t")
+        arr1.append(line_arr)
+finally:
+    reader1.close()
+
 input_data = np.array(arr)
 rows = input_data.shape[0]
 columns = input_data.shape[1]
 
-def handle_categorical_attributes():
+test_data = np.array(arr1)
+test_rows = test_data.shape[0]
+test_columns = test_data.shape[1]
+
+
+def handle_categorical_attributes(params):
     string_indices = []
-    for i in range(len(input_data[0])):
+    for i in range(len(params[0])):
         flag = False
         try:
-            complex(input_data[0][i])  # for int, long, float and complex
+            complex(params[0][i])  # for int, long, float and complex
         except ValueError:
             flag = True
         if flag:
             string_indices.append(i)
     for i in string_indices:
-        unique_strings = np.unique(input_data[:, i])
+        unique_strings = np.unique(params[:, i])
         replacement_vals = list(range(len(unique_strings)))
         dictionary = dict(zip(unique_strings, replacement_vals))
-        for j in range(len(input_data[:, i])):
-            input_data[j][i] = dictionary.get(input_data[j][i])
-    return string_indices
+        for j in range(len(params[:, i])):
+            params[j][i] = dictionary.get(params[j][i])
+    return params
 
-handle_categorical_attributes()
+input_data = handle_categorical_attributes(input_data)
+test_data = handle_categorical_attributes(test_data)
+
 features = input_data[:,0:columns-1]
 labels = input_data[:,columns-1:columns]
+test_features = test_data[:, 0:test_columns-1]
+test_labels = test_data[:,test_columns-1:test_columns]
 
 ## separating features and labels 
 features = features.astype(np.float)
 labels = labels.astype(np.int)
-
-# def normalize(features):
-#     minmax = []
-#     for i in range(features.shape[1]):
-#         col = features[:,i]
-#         min_value = np.min(col)
-#         max_value = np.max(col)
-#         minmax.append([min_value,max_value])
-#     for row in features:
-#         for i in range(len(row)):
-#             row[i] = (row[i]-minmax[i][0])/(minmax[i][1]-minmax[i][0])
-
-# ### normalizing the features 
-# normalize(features)
+test_features = test_features.astype(np.float)
+test_labels = test_labels.astype(np.int)
 
 combined = np.concatenate((features,labels), axis=1)
-cross_valid = np.array_split(combined, 10)
+test_combined = np.concatenate((test_features,test_labels), axis=1)
 
-### separate the data based on labels
 def separate_by_label(combined):
     label_dict = {}
     for i in range(len(combined)):
@@ -132,52 +138,43 @@ def get_values(actual,predictions):
     except ZeroDivisionError:
         pass
 
-# summary = summarize_by_label(combined)
-# for label in summary:
-# 	print(label)
-# 	for row in summary[label]:
-# 		print(row)
 scores = []
+try:
+    test, train = test_combined, combined
 
-for fold in range(len(cross_valid)):
-    try:
-        x = cross_valid[fold]
-        y = np.vstack([d for i,d in enumerate(cross_valid) if i!=fold])
-        test, train = np.asarray(x),np.asarray(y)
-
-        summary = summarize_by_label(train)
-        predictions = []
-        for row in test:
-            #calculate probabilities
-            no_of_rows = sum([summary[label][0][2] for label in summary])
-            probabilities = {}
-            for label,label_summary in summary.items():
-                probabilities[label] = summary[label][0][2]/float(no_of_rows)
-                
-                for i in range(len(label_summary)):
-                    mean_val, stdev_val, total_val= label_summary[i]
-                    probabilities[label] *= calculate_probability(row[i], mean_val, stdev_val)
-            total = 0
-            for val in probabilities.values():
-                total += val
-            for key in probabilities.keys():
-                probabilities[key] /= total
-            print(probabilities)
-            best_label, best_prob = None, -1
-            for class_value, probability in probabilities.items():
-                if best_label is None or probability > best_prob:
-                    best_prob = probability
-                    best_label = class_value
-            predictions.append(best_label)
-        actual = [row[-1] for row in x]
-        # correct = 0
-        # for i in range(len(actual)):
-        #     if(actual[i]==predictions[i]):
-        #         correct += 1
-        # scores.append(correct/float(len(actual))*100.0)
-        get_values(actual,predictions)
-    except TypeError:
-        pass
+    summary = summarize_by_label(train)
+    predictions = []
+    for row in test:
+        #calculate probabilities
+        no_of_rows = sum([summary[label][0][2] for label in summary])
+        probabilities = {}
+        for label,label_summary in summary.items():
+            probabilities[label] = summary[label][0][2]/float(no_of_rows)
+            
+            for i in range(len(label_summary)):
+                mean_val, stdev_val, total_val= label_summary[i]
+                probabilities[label] *= calculate_probability(row[i], mean_val, stdev_val)
+        total = 0
+        for val in probabilities.values():
+            total += val
+        for key in probabilities.keys():
+            probabilities[key] /= total
+        print(probabilities)
+        best_label, best_prob = None, -1
+        for class_value, probability in probabilities.items():
+            if best_label is None or probability > best_prob:
+                best_prob = probability
+                best_label = class_value
+        predictions.append(best_label)
+    actual = [row[-1] for row in test]
+    # correct = 0
+    # for i in range(len(actual)):
+    #     if(actual[i]==predictions[i]):
+    #         correct += 1
+    # scores.append(correct/float(len(actual))*100.0)
+    get_values(actual,predictions)
+except TypeError:
+    pass
 
 #print(scores)
 print("**** 10 Fold Accuracy ****")
